@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,12 +30,22 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  static const platform = MethodChannel('custom_counter');
+  int? _counter = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  Future<void> _incrementCounter() async {
+    try {
+      final result = await platform.invokeMethod<int>(
+        'incrementCounter',
+        { 'counter': _counter }
+      );
+
+      setState(() {
+        _counter = result;
+      });
+    } on PlatformException catch (e) {
+      debugPrint("$e");
+    }
   }
 
   @override
