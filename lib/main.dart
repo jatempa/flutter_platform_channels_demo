@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_app/models/product.dart';
+import 'package:my_app/widgets/product_image.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,22 +32,20 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static const platform = MethodChannel('custom_counter');
-  int? _counter = 0;
+  static const platform = MethodChannel('api_demo');
+  List<Product> products = [];
 
-  Future<void> _incrementCounter() async {
+  Future<List<Product>> _fetchProducts() async {
     try {
-      final result = await platform.invokeMethod<int>(
-        'incrementCounter',
-        { 'counter': _counter }
-      );
-
-      setState(() {
-        _counter = result;
-      });
+      final productList = await platform.invokeMethod('fetchProducts');
+      for (var productItem in productList) {
+        products.add(Product.fromJson(productItem));
+      }
     } on PlatformException catch (e) {
       debugPrint("$e");
     }
+
+    return products;
   }
 
   @override
@@ -55,25 +55,37 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      body: FutureBuilder(
+        future: _fetchProducts(),
+        builder:(context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          return _buildList(products);
+        },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+    );
+  }
+
+  Widget _buildList(List<Product>  products) {
+    return ListView.builder(
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index];
+        return Card(
+          elevation: 0,
+          color: Colors.white,
+          child: ListTile(
+            leading: ProductImage(url: product.image),
+            title: Text(product.title),
+            subtitle: Text(product.category),
+            trailing: Text(product.price.toStringAsFixed(2)),
+          ),
+        );
+      },
     );
   }
 }
